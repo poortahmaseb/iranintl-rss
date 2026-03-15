@@ -1,34 +1,34 @@
 from flask import Flask, Response
 import requests
-from bs4 import BeautifulSoup
 from datetime import datetime
 
 app = Flask(__name__)
 
-URL = "https://www.iranintl.com"
+API_URL = "https://api.iranintl.com/news?limit=20"
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    "User-Agent": "Mozilla/5.0"
 }
 
 @app.route("/rss")
 def rss():
     try:
-        r = requests.get(URL, headers=HEADERS, timeout=10)
-        soup = BeautifulSoup(r.text, "html.parser")
+        r = requests.get(API_URL, headers=HEADERS, timeout=10)
+        data = r.json()
 
         items = []
 
-        for article in soup.select("a[href*='/202']")[:15]:
-            title = article.get_text(strip=True)
-            link = "https://www.iranintl.com" + article.get("href")
+        for article in data.get("data", []):
+            title = article.get("title", "No title")
+            link = "https://www.iranintl.com/" + article.get("slug", "")
+            pub = article.get("published_at", datetime.utcnow().isoformat())
 
             items.append(f"""
                 <item>
                     <title>{title}</title>
                     <link>{link}</link>
                     <guid>{link}</guid>
-                    <pubDate>{datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT')}</pubDate>
+                    <pubDate>{pub}</pubDate>
                 </item>
             """)
 
@@ -36,8 +36,8 @@ def rss():
             <rss version="2.0">
                 <channel>
                     <title>Iran International – Custom RSS</title>
-                    <link>{URL}</link>
-                    <description>Unofficial RSS feed generated for IranIntl</description>
+                    <link>https://www.iranintl.com</link>
+                    <description>Unofficial RSS feed generated from IranIntl API</description>
                     {''.join(items)}
                 </channel>
             </rss>
